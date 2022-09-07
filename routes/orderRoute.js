@@ -8,6 +8,8 @@ const verifyRules = require('../middlewares/verifyRoles');
 const {ROLES_LIST} = require('../keys/config');
 const compareLast = require("../middlewares/compareLast");
 const findAmount = require("../middlewares/findAmount");
+const verifyRoles = require("../middlewares/verifyRoles");
+const limitUser = require("../middlewares/limitUser");
 
 const router = Router();
 
@@ -53,7 +55,7 @@ router.get("/getAllProducts", compareLast, (req, res) => {
     });
 }); // buyurtmani oynaga chiqaradi
 
-router.put("/editamount",  async(req, res) => {
+router.put("/editamount", limitUser, async(req, res) => {
   let amountOfProduct = await findAmount(req.body.idd);
 
   order
@@ -88,7 +90,10 @@ router.put("/editamount",  async(req, res) => {
     });
 }); // miqdorini o'zgartiradi
 router.put("/editprice", (req, res) => {
-  order
+  if(req.body.price< 0){
+    return res.status(404).json({ error: "Xatolik" });
+  }else{
+    order
     .findByIdAndUpdate(
       req.body.id,
       {
@@ -104,6 +109,8 @@ router.put("/editprice", (req, res) => {
         return res.status(404).json({ error: "Xatolik" });
       }
     });
+  }
+ 
 }); // miqdorini o'zgartiradi
 
 router.delete("/removeorder/:id", (req, res) => {
@@ -118,7 +125,7 @@ router.delete("/removeorder/:id", (req, res) => {
 
 
 // ---- role ni shu yerdan tekshirish zarur -- //
-router.get("/cost", verifyToken,(req, res) => {
+router.get("/cost", verifyToken, verifyRoles(ROLES_LIST.admin, ROLES_LIST.editor, ROLES_LIST.user),(req, res) => {
 
     order.find({posetdBy: req.user._id})
     .populate('product_id', 'name cat_id')

@@ -4,12 +4,15 @@ const order = require("../model/order");
 const products = require("../model/products");
 const report = require("../model/report");
 const verifyToken = require("../middlewares/verifyToken");
+const verifyRoles = require("../middlewares/verifyRoles");
 const reportQuery = require("../middlewares/reportQuery");
 const queryReport = require("../model/queryReport");
+const { ROLES_LIST } = require("../keys/config");
 
 const router = Router();
 
 router.get("/getHistory", (req, res) => {
+  // report.aggregate([{$group:}])
   report
     .find()
     .populate("product_id", "")
@@ -29,7 +32,17 @@ router.get("/getReport/:id", (req, res) => {
     });
 }); //report ni oynaga chiqaradi
 
-router.put("/editReport/:id",(req,res)=>{
+router.put("/editReport/:id",verifyToken, verifyRoles(ROLES_LIST.admin,ROLES_LIST.editor),(req,res)=>{
+  products.findOne({_id:req.body.product_id})
+    .then(data=>{
+      if(req.body.org_amount > req.body.amount){
+        data.amount =  data.amount + (req.body.org_amount - req.body.amount);
+        data.save();
+      }else if(req.body.org_amount < req.body.amount){
+        data.amount =  data.amount - ( req.body.amount - req.body.org_amount);
+        data.save();
+      }
+    })
   report.findOne({_id:req.params.id})
 .then(data=>{
     if(data){
@@ -37,7 +50,7 @@ router.put("/editReport/:id",(req,res)=>{
       data.sale_price = req.body.sale_price
       data.name = req.body.name;
       data.save()
-    return res.json(data)
+      return res.json(data)
     }else{
         return res.status(406).json({error:"Xatolik"})
     }
@@ -45,7 +58,7 @@ router.put("/editReport/:id",(req,res)=>{
 })
 
 router.post("/getQuery", (req, res) => {
-  const { name, person, category, date } = req.body;
+  const { name, person, category, date, month } = req.body;
   if (name) {
     report
       .find({ name: { $regex: name } })
@@ -64,7 +77,7 @@ router.post("/getQuery", (req, res) => {
       });
   }else  if (category) {
     report
-      .find({ category: { $regex: category } })
+      .find({ category: { $regex: category.toLowerCase() } })
       .populate("postedBy", "")
       .populate("product_id", "")
       .then((data) => {
@@ -87,7 +100,26 @@ router.post("/getQuery", (req, res) => {
         }
       });
   
-  }
+  }else if (month) {
+    console.log(month,'month');
+    console.log(new Date().getDate(),'mo');
+    let query = new Date(month);
+    let today = new Date(query).setUTCMonth(query);
+      // report
+      //   .find({ createdAt: { $gt: query, $lt: today } })
+      //   .populate("product_id", "")
+      //   .populate("postedBy", "")
+      //   .then((data) => {
+      //     if (data) {
+      //       return res.json(data);
+      //     } else {
+      //       return res.json({
+      //         error: `${req.params.query} bo'yicha qidiruv topilmadi`,
+      //       });
+      //     }
+      //   });
+    
+    }
 });// bittalab saralash
 
 
@@ -252,7 +284,7 @@ router.post("/getQueryReport", (req, res) => {
   });
 
   //// ------------------------------------ ////
-router.delete('/removeReport/:id',(req,res)=>{
+router.delete('/removeReport/:id', verifyToken,verifyRoles(ROLES_LIST.admin,ROLES_LIST.editor), (req,res)=>{
   report.findByIdAndDelete(req.params.id)
   .then(data=>{
     if(data){

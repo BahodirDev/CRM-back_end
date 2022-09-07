@@ -1,10 +1,13 @@
 const {Router} = require('express');
+const { ROLES_LIST } = require('../keys/config');
+const verifyRoles = require('../middlewares/verifyRoles');
+const verifyToken = require('../middlewares/verifyToken');
 const category = require('../model/category');
 
 
 const router = Router() 
 
-router.post("/categoryAdd",(req,res)=>{
+router.post("/categoryAdd", verifyToken, verifyRoles(ROLES_LIST.editor,ROLES_LIST.admin),(req,res)=>{
     category.create({
         cat_name:req.body.catName,
     })
@@ -31,7 +34,7 @@ router.get('/getCategory',(req,res)=>{
     })
 })
 
-router.delete("/remove/:id",(req,res)=>{
+router.delete("/remove/:id",  verifyToken, verifyRoles(ROLES_LIST.editor,ROLES_LIST.admin),(req,res)=>{
     
     category.findByIdAndRemove(req.params.id)
         .then(data=>{
@@ -47,7 +50,7 @@ router.get('/category/:id',(req,res)=>{
         })
 });
 
-router.put("/categoryEdit/:id",(req,res)=>{
+router.put("/categoryEdit/:id",  verifyToken, verifyRoles(ROLES_LIST.editor,ROLES_LIST.admin),(req,res)=>{
     const {name} = req.body;
     category.findByIdAndUpdate(req.params.id,{
         $set:{cat_name:name}

@@ -5,6 +5,7 @@ const products = require("../model/products");
 const verifyRoles = require("../middlewares/verifyRoles");
 const { ROLES_LIST } = require("../keys/config");
 const report = require("../model/report");
+const limitUser = require("../middlewares/limitUser");
 
 const router = Router();
 
@@ -35,7 +36,8 @@ router.get("/editProduct/:id", (req, res) => {
 }); //element o`zgartirish uchun router
 
 router.post("/addproducts", verifyToken, (req, res) => {
-  if(!req.body.type == '' || !req.body.fish == '' || !req.body.amount == '' || !req.body.price == "" || !req.body.sale == '' ){
+  console.log(req.body);
+  if(req.body){
     products
     .create({
       cat_id: req.body.type,
@@ -61,7 +63,7 @@ router.post("/addproducts", verifyToken, (req, res) => {
   
 }); //mahsulotlarni ba`zaga joylaydi  // role bilan
 
-router.delete("/remove_product/:id", (req, res) => {
+router.delete("/remove_product/:id", verifyToken, verifyRoles(ROLES_LIST.admin, ROLES_LIST.editor), (req, res) => {
   products.findByIdAndDelete(req.params.id).then((data) => {
     if (data) {
       return res.json(data);
@@ -71,7 +73,7 @@ router.delete("/remove_product/:id", (req, res) => {
   });
 });
 
-router.put("/editProduct/:id", (req, res) => {
+router.put("/editProduct/:id", verifyToken, verifyRoles(ROLES_LIST.admin, ROLES_LIST.editor), (req, res) => {
   const {
     name,
     description,
@@ -114,7 +116,7 @@ router.get("/search_item/:query", (req, res) => {
   });
 }); // qidiruv bo`yicha topish
 
-router.post("/show_item_report", verifyToken, (req, res) => {
+router.post("/show_item_report",limitUser, verifyToken, (req, res) => {
   const { amount, sale_price, product_id } = req.body;
   products.findOne({ _id:product_id })
   .then((result) => {

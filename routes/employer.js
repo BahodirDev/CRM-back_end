@@ -3,6 +3,9 @@ const category = require("../model/category");
 const products = require("../model/products");
 const Employer = require("../model/Employer");
 const bcrypt = require('bcrypt');
+const verifyToken = require("../middlewares/verifyToken");
+const { ROLES_LIST } = require("../keys/config");
+const verifyRoles = require("../middlewares/verifyRoles");
 
 const router = Router();
 
@@ -18,7 +21,7 @@ router.get("/allList/:id", (req, res) => {
   });
 });
 
-router.post("/addemployer", (req, res) => {
+router.post("/addemployer", verifyToken, verifyRoles(ROLES_LIST.editor,ROLES_LIST.admin,), (req, res) => {
   const { fish, login, password, description,tel} = req.body;
   try {
     if (!fish || !login || !password) {
@@ -56,7 +59,7 @@ router.post("/addemployer", (req, res) => {
   }
 });
 
-router.get('/editUser/:id',(req,res)=>{
+router.get('/editUser/:id', verifyToken, verifyRoles(ROLES_LIST.editor,ROLES_LIST.admin),(req,res)=>{
   Employer.findById(req.params.id)
     .then(data=>{
       if(data){
@@ -68,7 +71,7 @@ router.get('/editUser/:id',(req,res)=>{
 }) // edit uchun 1 ta user topiladi
 
 //---- role bilan bo`lgan muammoni yechish kerak---///
-router.put('/editUser/:id',(req,res)=>{
+router.put('/editUser/:id',verifyToken, verifyRoles(ROLES_LIST.editor,ROLES_LIST.admin),(req,res)=>{
   const {fish,description,tel,login,assign_time,role} = req.body;
   try {
  Employer.findOne({_id:req.params.id})  
@@ -77,12 +80,12 @@ router.put('/editUser/:id',(req,res)=>{
       return res.status(406).json({error:"Xatolik"})
     }else{
       console.log(fish,description,tel,login,assign_time,role);
-    user.fish = fish,
-    user.description = description,
-    user.tel = tel,
-    user.login = login,
-    user.assign_time = assign_time ? assign_time : Date.now(),
-    user.role = {roles:[role]}
+   fish ? user.fish = fish : null,
+   description ? user.description = description : null,
+    tel  ? user.tel = tel : null,
+   login ? user.login = login : null,
+  user.assign_time = assign_time ? assign_time : Date.now(),
+    role ? user.role = {roles:[role]} : null
     user.save();
  
     return res.json(user)
@@ -95,7 +98,7 @@ router.put('/editUser/:id',(req,res)=>{
   }
 }) // employees ni o`zgartiradi ammo login uchun middleware yozish zarur
 
-router.delete("/remove_item/:id",(req,res)=>{
+router.delete("/remove_item/:id",verifyToken, verifyRoles(ROLES_LIST.editor,ROLES_LIST.admin),(req,res)=>{
   try {
     Employer.findByIdAndDelete(req.params.id)
       .then(data=>{
